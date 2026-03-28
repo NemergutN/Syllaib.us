@@ -7,6 +7,8 @@ const login = () => {
 
 <button>
  Upload Syllabus
+
+ 
 </button>
 
  </>
