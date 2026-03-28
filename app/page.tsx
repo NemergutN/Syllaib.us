@@ -71,15 +71,15 @@ export default function Home() {
 
       {/* Features */}
       <div className="px-6 pb-20 max-w-2xl mx-auto flex flex-col gap-4">
-        <div className="bg-white border border-amber-200 rounded-2xl p-6">
+        <div className="bg-amber-900 rounded-2xl p-6">
           <span className="text-xs font-mono text-amber-400 mb-2 block">01</span>
-          <h3 className="text-base font-semibold text-amber-950">Get a timeline</h3>
-          <p className="text-sm text-amber-600 mt-1">Every deadline pulled out and laid out in order, so nothing sneaks up on you.</p>
+          <h3 className="text-base font-semibold text-amber-50">Get a timeline</h3>
+          <p className="text-sm text-amber-300 mt-1">Every deadline pulled out and laid out in order, so nothing sneaks up on you.</p>
         </div>
-        <div className="bg-white border border-amber-200 rounded-2xl p-6">
+        <div className="bg-amber-900 rounded-2xl p-6">
           <span className="text-xs font-mono text-amber-400 mb-2 block">02</span>
-          <h3 className="text-base font-semibold text-amber-950">Get a grade breakdown</h3>
-          <p className="text-sm text-amber-600 mt-1">See exactly how your final grade is weighted — assignments, exams, participation, and more.</p>
+          <h3 className="text-base font-semibold text-amber-50">Get a grade breakdown</h3>
+          <p className="text-sm text-amber-300 mt-1">See exactly how your final grade is weighted — assignments, exams, participation, and more.</p>
         </div>
         <div className="bg-amber-900 rounded-2xl p-6">
           <span className="text-xs font-mono text-amber-400 mb-2 block">03</span>

@@ -178,6 +178,101 @@ async function generateRoadmap() {
 
       <div className="max-w-5xl mx-auto px-6 py-10 flex flex-col gap-10">
 
+        {/* ── Profile: major + career goal ───────deepti────────────────────────────── */}
+      <section>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-amber-500 mb-4">
+          Your Profile
+        </h2>
+        <div className="bg-white border border-amber-200 rounded-2xl p-6 flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wide text-amber-400 block mb-1.5">
+                Major
+              </label>
+              <input
+                className="w-full border border-amber-200 rounded-xl px-4 py-2.5 text-sm text-amber-950 outline-none focus:ring-2 focus:ring-amber-300 placeholder:text-amber-300 transition-all"
+                placeholder="e.g. Computer Science"
+                value={major}
+                onChange={(e) => setMajor(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wide text-amber-400 block mb-1.5">
+                Career Goal
+              </label>
+              <input
+                className="w-full border border-amber-200 rounded-xl px-4 py-2.5 text-sm text-amber-950 outline-none focus:ring-2 focus:ring-amber-300 placeholder:text-amber-300 transition-all"
+                placeholder="e.g. Software Engineer at a top tech company"
+                value={careerGoal}
+                onChange={(e) => setCareerGoal(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={saveProfile}
+              disabled={!major.trim() || !careerGoal.trim()}
+              className="bg-amber-900 text-amber-50 px-5 py-2 rounded-full text-sm font-medium hover:bg-amber-800 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Save Profile
+            </button>
+            <button
+              onClick={generateRoadmap}
+              disabled={generatingRoadmap || !major.trim() || !careerGoal.trim()}
+              className="border border-amber-300 text-amber-800 px-5 py-2 rounded-full text-sm font-medium hover:bg-amber-100 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {generatingRoadmap ? "Generating…" : "Generate Roadmap →"}
+            </button>
+            {profileSaved && (
+              <span className="text-xs text-green-600">✓ Saved</span>
+            )}
+            {roadmapError && (
+              <span className="text-xs text-red-500">{roadmapError}</span>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Tabs (only appears once roadmap exists) ─────────────────────────── */}
+      {roadmap && (
+        <div className="flex gap-2">
+          {(["courses", "roadmap"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 rounded-full text-xs font-medium transition-all capitalize ${
+                tab === t
+                  ? "bg-amber-900 text-amber-50"
+                  : "bg-white border border-amber-200 text-amber-700 hover:bg-amber-100"
+              }`}
+            >
+              {t === "roadmap" ? "My Roadmap" : "Courses"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Roadmap tab ──────────────────────────────────────────────────────── */}
+      {tab === "roadmap" && roadmap && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-amber-500">
+              Your Roadmap
+            </h2>
+            <button
+              onClick={generateRoadmap}
+              disabled={generatingRoadmap}
+              className="text-xs text-amber-500 hover:text-amber-700 transition-colors disabled:opacity-40"
+            >
+              {generatingRoadmap ? "Regenerating…" : "↻ Regenerate"}
+            </button>
+          </div>
+          <RoadmapView roadmap={roadmap} />
+        </section>
+      )}
+
+        {(tab === "courses" || !roadmap) && (
+          <>
         {/* Courses */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wide text-amber-500 mb-4">Your Courses</h2>
@@ -245,6 +340,8 @@ async function generateRoadmap() {
             </div>
           )}
         </section>
+          </>
+        )}
 
       </div>
     </div>

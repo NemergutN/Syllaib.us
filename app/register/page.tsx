@@ -62,7 +62,7 @@ export default function Register() {
             Start organizing your semester in seconds.
           </p>
 
-          <form onSubmit={Registeruser} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             
             <input
               name="username"
@@ -96,7 +96,7 @@ export default function Register() {
               placeholder="Confirm Password"
               value={form.confirmPassword}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm "
+              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
             />
 
             {error && (
