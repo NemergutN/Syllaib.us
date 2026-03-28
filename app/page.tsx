@@ -1,6 +1,10 @@
-import Image from "next/image";
+"use client";
+
+import { useRef } from "react";
 
 export default function Home() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   return (
     <div className="min-h-screen bg-amber-50 w-full font-sans">
 
@@ -19,7 +23,11 @@ export default function Home() {
         <p className="text-amber-700 text-base max-w-sm">
           Upload your syllabus and we'll extract your deadlines, grades, and goals — instantly.
         </p>
-        <button className="mt-2 bg-amber-900 text-amber-50 px-6 py-3 rounded-full text-sm font-medium hover:bg-amber-800 active:scale-95 transition-all">
+        <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" className="hidden" />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="mt-2 bg-amber-900 text-amber-50 px-6 py-3 rounded-full text-sm font-medium hover:bg-amber-800 active:scale-95 transition-all"
+        >
           Upload Syllabus
         </button>
       </div>
