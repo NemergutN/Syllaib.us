@@ -9,6 +9,7 @@ type ClassCardProps = {
   lectures: { day: string; time: string }[];
   officeHours: { day: string; time: string; instructor?: string }[];
   grading: GradeBreakdown[];
+  drops: string;
 };
 
 export default function ClassCard({
@@ -17,6 +18,7 @@ export default function ClassCard({
   lectures,
   officeHours,
   grading,
+  drops, 
 }: ClassCardProps) {
   return (
     <div className="bg-white border border-amber-200 rounded-2xl p-6 flex flex-col gap-5">
@@ -66,6 +68,11 @@ export default function ClassCard({
             </li>
           ))}
         </ul>
+      </div>
+
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-amber-500 mb-2">Drops</h4>
+        <p className="text-sm text-amber-800">{drops}</p>
       </div>
     </div>
   );

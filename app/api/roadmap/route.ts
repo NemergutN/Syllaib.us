@@ -1,0 +1,149 @@
+import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { courses, major, careerGoal } = body;
+
+  if (!major || !careerGoal) {
+    return NextResponse.json(
+      { error: "Major and career goal are required." },
+      { status: 400 }
+    );
+  }
+
+  const courseNames: string[] = [];
+  const allSkills: string[] = [];
+  const allTopics: string[] = [];
+
+  if (Array.isArray(courses)) {
+    for (const c of courses) {
+      if (typeof c === "string") {
+        courseNames.push(c);
+      } else {
+        if (c.courseName) courseNames.push(c.courseName);
+        if (c.skillsGained) allSkills.push(...c.skillsGained);
+        if (c.topicsCovered) allTopics.push(...c.topicsCovered);
+      }
+    }
+  }
+
+  // Step 1 — Gemini searches the web for real job market data
+  let jobMarketContext = "";
+  try {
+    const searchResponse = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `What are the most in-demand skills, tools, technologies, and qualifications for a ${careerGoal} in 2025? List specific programming languages, frameworks, certifications, and experiences that employers are actively requiring right now.`,
+      config: {
+        tools: [{ googleSearch: {} }],
+      },
+    });
+    jobMarketContext = searchResponse.text ?? "";
+  } catch {
+    jobMarketContext = `Use your knowledge of what a ${careerGoal} needs in 2025.`;
+  }
+
+  // Step 2 — Gemini generates the full structured roadmap
+  const prompt = `You are an expert academic and career advisor AI agent. Generate a deeply personalized career roadmap for this student.
+
+STUDENT PROFILE:
+- Major: ${major}
+- Career Goal: ${careerGoal}
+
+COURSES CURRENTLY TAKING:
+${courseNames.length > 0 ? courseNames.join(", ") : "No courses uploaded yet — base advice on their major and goal."}
+
+SKILLS BEING BUILT FROM COURSEWORK:
+${allSkills.length > 0 ? [...new Set(allSkills)].join(", ") : "Not yet extracted — infer from the course names and major."}
+
+TOPICS BEING STUDIED:
+${allTopics.length > 0 ? [...new Set(allTopics)].join(", ") : "Not yet extracted — infer from the course names and major."}
+
+LIVE JOB MARKET DATA (from Google Search, 2025):
+${jobMarketContext}
+
+Important instructions:
+- Be SPECIFIC to this student's actual courses and stated goal.
+- Reference their actual course names where relevant.
+- Every action item must be concrete and immediately actionable.
+- The skillMatchScore should honestly reflect how well their current courses align with their goal.
+
+Return ONLY valid JSON, no markdown fences, no explanation, nothing else:
+
+{
+  "skillMatchScore": <integer 0-100>,
+  "motivationalInsight": "<2-3 sentences personalized to their specific major and goal, mention their actual courses if available>",
+  "currentStrengths": ["<skill they are actively building from their coursework>"],
+  "skillGaps": [
+    {
+      "skill": "<specific skill name>",
+      "importance": "<critical|important|nice-to-have>",
+      "howToLearn": "<specific actionable step — name a project, course, or resource>",
+      "estimatedTime": "<e.g. 3 weeks>"
+    }
+  ],
+  "thisSemersterActions": [
+    {
+      "action": "<specific action, reference their actual course or situation if possible>",
+      "category": "<project|certification|coursework|networking|application>",
+      "priority": <integer 1-5, 1 is highest>,
+      "deadline": "<timeframe e.g. Next 2 weeks or End of semester>",
+      "why": "<one sentence — why this specifically helps their stated goal>"
+    }
+  ],
+  "next6Months": ["<specific action item>"],
+  "nextYear": ["<specific action item>"],
+  "recommendedProjects": [
+    {
+      "name": "<project name>",
+      "description": "<2 sentences — what to build and why it matters for their goal>",
+      "skillsItBuilds": ["<skill>"],
+      "difficulty": "<beginner|intermediate|advanced>",
+      "estimatedHours": <integer>
+    }
+  ],
+  "recommendedCertifications": [
+    {
+      "name": "<certification name>",
+      "provider": "<provider name>",
+      "relevance": "<one sentence — why this cert specifically helps their goal>",
+      "cost": "<free|$amount|paid>",
+      "timeToComplete": "<timeframe>"
+    }
+  ],
+  "weeklyPlan": [
+    {
+      "focus": "<focus area for the week>",
+      "tasks": ["<concrete task 1>", "<concrete task 2>"],
+      "timeEstimateHours": <integer>
+    }
+  ]
+}`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+    },
+  });
+
+  let roadmap: any;
+  try {
+    let raw = response.text ?? "";
+    if (raw.includes("```")) {
+      raw = raw.split("```")[1];
+      if (raw.startsWith("json")) raw = raw.slice(4);
+    }
+    roadmap = JSON.parse(raw.trim());
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to parse response. Try again.", raw: response.text },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ roadmap });
+}

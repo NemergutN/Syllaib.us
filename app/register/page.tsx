@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const Login = () => {
+export default function Register() {
   const router = useRouter();
 
   const [form, setForm] = useState({
+    username: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -22,17 +24,21 @@ const Login = () => {
     e.preventDefault();
     setError(null);
 
-    if (!form.email || !form.password) {
+    if (!form.username || !form.email || !form.password || !form.confirmPassword) {
       return setError("Please fill in all fields");
+    }
+
+    if (form.password !== form.confirmPassword) {
+      return setError("Passwords do not match");
     }
 
     setLoading(true);
 
-    // Fake login
+    // Simulate request
     setTimeout(() => {
       setLoading(false);
       router.push("/dashboard");
-    }, 1000);
+    }, 1200);
   }
 
   return (
@@ -45,18 +51,26 @@ const Login = () => {
         </h1>
       </div>
 
-      {/* Login Card */}
+      {/* Form */}
       <div className="flex flex-1 items-center justify-center px-6 py-16">
         <div className="w-full max-w-md bg-white border border-amber-200 rounded-2xl p-8 shadow-sm">
 
           <h2 className="text-2xl font-bold text-amber-950 text-center mb-2">
-            Welcome back
+            Create account
           </h2>
           <p className="text-sm text-amber-600 text-center mb-6">
-            Log in to continue your progress.
+            Start organizing your semester in seconds.
           </p>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={Registeruser} className="flex flex-col gap-4">
+            
+            <input
+              name="username"
+              placeholder="Username"
+              value={form.username}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
+            />
 
             <input
               name="email"
@@ -76,6 +90,15 @@ const Login = () => {
               className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
             />
 
+            <input
+              name="confirmPassword"
+              type="password"
+              placeholder="Confirm Password"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm "
+            />
+
             {error && (
               <p className="text-red-600 text-sm text-center">{error}</p>
             )}
@@ -85,7 +108,7 @@ const Login = () => {
               disabled={loading}
               className="mt-2 bg-amber-900 text-amber-50 py-3 rounded-full text-sm font-medium hover:bg-amber-800 active:scale-95 transition-all disabled:opacity-50"
             >
-              {loading ? "Logging in..." : "Log in"}
+              {loading ? "Creating account..." : "Sign up"}
             </button>
           </form>
 
@@ -96,7 +119,7 @@ const Login = () => {
             <div className="flex-1 h-px bg-amber-200" />
           </div>
 
-          {/* OAuth */}
+          {/* OAuth Buttons */}
           <div className="flex flex-col gap-3">
             <button className="w-full border border-amber-200 py-3 rounded-xl text-sm font-medium hover:bg-amber-100 transition">
               Continue with Google
@@ -107,14 +130,14 @@ const Login = () => {
             </button>
           </div>
 
-          {/* Register link */}
+          {/* Login Link */}
           <p className="text-center text-sm text-amber-600 mt-6">
-            Don’t have an account?{" "}
+            Already have an account?{" "}
             <span
-              onClick={() => router.push("/register")}
+              onClick={() => router.push("/login")}
               className="text-amber-900 font-medium cursor-pointer hover:underline"
             >
-              Sign up
+              Log in
             </span>
           </p>
 
@@ -122,6 +145,4 @@ const Login = () => {
       </div>
     </div>
   );
-};
-
-export default Login;
+}

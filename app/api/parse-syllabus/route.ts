@@ -30,6 +30,7 @@ const syllabusSchema = z.object({
   officeHours: z.array(officeHourSchema),
   grading: z.array(gradingSchema),
   deadlines: z.array(deadlineSchema),
+  drops: z.string().describe("Amount of drops you have for homework, quizzes, etc. (specify)")
 });
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -61,11 +62,13 @@ export async function POST(req: NextRequest) {
   "courseName": "full course name",
   "courseCode": "e.g. CS 401",
   "lectures": [{ "day": "Monday", "time": "9:20 PM - 10:40 PM" }],
-  "officeHours": [{ "day": "Wednesday", "time": "2:30-5:30", "instructor": "Abraham Gale" }],
+  "officeHours": [{ "day": "Wednesday", "time": "2:30-5:30", "instructor": "John Doe" }],
   "grading": [{ "category": "Homework", "weight": 30 }],
-  "deadlines": [{ "title": "Midterm Exam", "date": "Mar 2" }]
+  "deadlines": [{ "title": "Midterm Exam", "date": "Mar 2" }],
+  "drops": "HW drops: 1, Quiz drops: 1, ...
 }
-For grading weights, extract the numeric percentage only (e.g. "30% Homework" → weight: 30).`,
+For grading weights, extract the numeric percentage only (e.g. "30% Homework" → weight: 30). 
+For drops, only specify a drop (i.e. HW drops) if there is a nonzero amount. If there is none, make it the string 'N/A'`,
         },
       ],
     },
@@ -73,8 +76,6 @@ For grading weights, extract the numeric percentage only (e.g. "30% Homework" �
       responseMimeType: "application/json",
     },
   });
-
-  console.log("Gemini raw response:", response.text);
 
   let parsed: z.infer<typeof syllabusSchema>;
   try {

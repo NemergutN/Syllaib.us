@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ClassCard from "../components/class_card";
+// ── Roadmap ───────Deepti───────────────────────────────────────────────────────
+import RoadmapView, { type RoadmapData } from "../components/roadmapView";
 
 type SyllabusData = {
   courseName: string;
@@ -11,6 +13,7 @@ type SyllabusData = {
   officeHours: { day: string; time: string; instructor?: string }[];
   grading: { category: string; weight: number }[];
   deadlines: { title: string; date: string }[];
+  drops: string;
 };
 
 type Recommendation = {
@@ -27,11 +30,27 @@ export default function Dashboard() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  // ── Roadmap state ─────Deepti────────────────────────────────────────────────────
+  const [major, setMajor] = useState("");
+  const [careerGoal, setCareerGoal] = useState("");
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [tab, setTab] = useState<"courses" | "roadmap">("courses");
+  const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
+  const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
+  const [roadmapError, setRoadmapError] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("courses") ?? "[]") as SyllabusData[];
     setCourses(stored);
     if (stored.length > 0) fetchRecommendations(stored);
+
+    // ── Load saved profile + roadmap ──────────────────────────────────────────
+    const savedMajor = localStorage.getItem("major") ?? "";
+    const savedCareerGoal = localStorage.getItem("careerGoal") ?? "";
+    const savedRoadmap = localStorage.getItem("roadmap");
+    setMajor(savedMajor);
+    setCareerGoal(savedCareerGoal);
+    if (savedRoadmap) setRoadmap(JSON.parse(savedRoadmap));
   }, []);
 
   async function fetchRecommendations(data: SyllabusData[]) {
@@ -78,10 +97,53 @@ export default function Dashboard() {
 
   function clearAll() {
     localStorage.removeItem("courses");
+    localStorage.removeItem("major");
+    //deepti
+    localStorage.removeItem("careerGoal");
+    localStorage.removeItem("roadmap");
+    setMajor("");
+    setCareerGoal("");
+    setRoadmap(null);
+    //deepti
     setCourses([]);
     setRecommendations([]);
     router.push("/");
   }
+
+  // ── Save profile ───Deep───────────────────────────────────────────────────────
+function saveProfile() {
+  localStorage.setItem("major", major);
+  localStorage.setItem("careerGoal", careerGoal);
+  setProfileSaved(true);
+  setTimeout(() => setProfileSaved(false), 2000);
+  if (courses.length > 0) fetchRecommendations(courses);
+}
+
+// ── Generate roadmap ──────Deep────────────────────────────────────────────────
+async function generateRoadmap() {
+  if (!major.trim() || !careerGoal.trim()) {
+    setRoadmapError("Fill in your major and career goal first.");
+    return;
+  }
+  setGeneratingRoadmap(true);
+  setRoadmapError(null);
+  try {
+    const res = await fetch("/api/roadmap", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courses, major, careerGoal }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? "Failed to generate roadmap");
+    setRoadmap(json.roadmap);
+    localStorage.setItem("roadmap", JSON.stringify(json.roadmap));
+    setTab("roadmap");
+  } catch (err) {
+    setRoadmapError(err instanceof Error ? err.message : "Something went wrong");
+  } finally {
+    setGeneratingRoadmap(false);
+  }
+}
 
   const allDeadlines = courses
     .flatMap((c) => c.deadlines.map((d) => ({ ...d, course: c.courseCode })))
@@ -131,6 +193,7 @@ export default function Dashboard() {
                   lectures={c.lectures}
                   officeHours={c.officeHours}
                   grading={c.grading}
+                  drops={c.drops}
                 />
               ))}
             </div>
