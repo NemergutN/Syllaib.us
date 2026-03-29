@@ -1,10 +1,13 @@
 import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI;
+let uri = process.env.MONGODB_URI;
 
 if (!uri) {
   throw new Error("❌ MONGODB_URI is missing. Set MONGODB_URI in .env.local with mongodb:// or mongodb+srv://");
 }
+
+// Handle quoted env values (e.g., "mongodb+srv://...") from .env parsing style.
+uri = uri.trim().replace(/^['"]|['"]$/g, "");
 
 if (!uri.startsWith("mongodb://") && !uri.startsWith("mongodb+srv://")) {
   throw new Error(
