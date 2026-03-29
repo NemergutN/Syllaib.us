@@ -30,27 +30,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Step 1 — Gemini searches the web for real job market data (with grounding)
-  let jobMarketContext = "";
-  try {
-    const searchModel = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      tools: [{ googleSearch: {} }],
-    });
-    const searchResult = await searchModel.generateContent({
-      contents: [{
-        role: "user",
-        parts: [{
-          text: `What are the most in-demand skills, tools, technologies, and qualifications for a ${careerGoal} in 2025? List specific programming languages, frameworks, certifications, and experiences that employers are actively requiring right now.`,
-        }],
-      }],
-    });
-    jobMarketContext = searchResult.response.text();
-  } catch {
-    jobMarketContext = `Use your knowledge of what a ${careerGoal} needs in 2025-2026.`;
-  }
+  const jobMarketContext = `Use your knowledge of what a ${careerGoal} needs in 2025-2026.`;
 
-  // Step 2 — Gemini generates the full structured roadmap
+  // Generate the full structured roadmap
   const prompt = `You are an overqualified expert academic and career advisor AI agent with 10+ years of experience. Generate a thorough, exhaustively personalized, but realistic career roadmap for this student.
 
 STUDENT PROFILE:
