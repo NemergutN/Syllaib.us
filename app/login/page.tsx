@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { login } from "@/actions/login";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 
 const Login = () => {
   const router = useRouter();
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/dashboard");
+  }, [status, router]);
+
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -31,19 +36,19 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const formData = new FormData();
-      formData.set("email", form.email);
-      formData.set("password", form.password);
+      const result = await signIn("credentials", {
+        email: form.email,
+        password: form.password,
+        redirect: false,
+      });
 
-      const result = await login(formData);
-
-      if (!result.success) {
-        setError(result.message ?? "Invalid login credentials.");
+      if (result?.error) {
+        setError("Invalid email or password.");
       } else {
         router.push("/dashboard");
       }
     } catch (err) {
-      console.error("Login action error", err);
+      console.error("Login error", err);
       setError("Unable to login, please try again.");
     } finally {
       setLoading(false);
@@ -56,7 +61,7 @@ const Login = () => {
       {/* Nav */}
       <div className="px-8 py-5 border-b border-amber-200">
         <h1 className="text-center text-xl font-semibold tracking-tight text-amber-900">
-          Syllabus.AI
+          Syllaib.us
         </h1>
       </div>
 

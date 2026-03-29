@@ -1,14 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { registerUser, RegisterState } from "@/actions/auth";
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 const initialState: RegisterState = {};
 
 export default function Register() {
   const router = useRouter();
+  const { status } = useSession();
   const [state, formAction, isPending] = useActionState(registerUser, initialState);
+
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/dashboard");
+  }, [status, router]);
 
   return (
     <div className="min-h-screen bg-amber-50 flex flex-col font-sans">
@@ -16,7 +21,7 @@ export default function Register() {
       {/* Nav */}
       <div className="px-8 py-5 border-b border-amber-200">
         <h1 className="text-center text-xl font-semibold tracking-tight text-amber-900">
-          Syllabus.AI
+          Syllaib.us
         </h1>
       </div>
 

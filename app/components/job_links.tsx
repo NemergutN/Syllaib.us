@@ -18,7 +18,7 @@ export default function JobLinks({ jobs }: JobLinksProps) {
           href={job.url ?? "#"}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-between p-3 rounded-xl border border-amber-100 hover:bg-amber-50 transition-colors group"
+          className="flex items-center justify-between p-3 rounded-xl border border-amber-100 hover:bg-amber-50 hover:scale-[1.02] hover:shadow-md transition-all duration-300 ease-in-out group"
         >
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-medium text-amber-950 group-hover:underline">

@@ -40,7 +40,7 @@ export default function Landing() {
       {/* Nav */}
       <div className="px-8 py-5 border-b border-amber-200">
         <h1 className="text-center text-xl font-semibold tracking-tight text-amber-900">
-          Syllabus.AI
+          Syllaib.us
         </h1>
       </div>
 

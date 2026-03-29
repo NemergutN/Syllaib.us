@@ -2,13 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import ClassCard from "../components/class_card";
 import JobLinks from "../components/job_links";
+import UserMenu from "../components/UserMenu";
 // ── Roadmap ───────Deepti───────────────────────────────────────────────────────
 import RoadmapView, { type RoadmapData } from "../components/roadmapView";
+import KnowledgeMap, { type KnowledgeMapData } from "../components/map_node";
 
 
 type SyllabusData = {
+  syllabusId?: string;
   courseName: string;
   courseCode: string;
   lectures: { day: string; time: string }[];
@@ -34,6 +38,7 @@ type Job = {
 
 export default function Dashboard() {
   const [courses, setCourses] = useState<SyllabusData[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loadingRecs, setLoadingRecs] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -43,6 +48,7 @@ export default function Dashboard() {
   const [loadingJobs, setLoadingJobs] = useState(false);
 
   const router = useRouter();
+  const { status } = useSession();
   // ── Roadmap state ─────Deepti────────────────────────────────────────────────────
   const [major, setMajor] = useState("");
   const [careerGoal, setCareerGoal] = useState("");
@@ -51,23 +57,55 @@ export default function Dashboard() {
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
   const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
   const [roadmapError, setRoadmapError] = useState<string | null>(null);
+  const [knowledgeMap, setKnowledgeMap] = useState<KnowledgeMapData | null>(null);
+  const [generatingMap, setGeneratingMap] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("courses") ?? "[]") as SyllabusData[];
-    setCourses(stored);
-    if (stored.length > 0) {
-      fetchRecommendations(stored);
-      fetchJobs(stored);
+  // ── Fetch courses from MongoDB ────────────────────────────────────────────────
+  async function fetchCourses() {
+    setLoadingCourses(true);
+    try {
+      const res = await fetch("/api/syllabuses");
+      const json = await res.json();
+      if (res.ok && json.syllabi) {
+        setCourses(json.syllabi);
+        if (json.syllabi.length > 0) {
+          fetchRecommendations(json.syllabi);
+          fetchJobs(json.syllabi);
+        }
+      }
+    } finally {
+      setLoadingCourses(false);
     }
+  }
 
-    // ── Load saved profile + roadmap ──────────────────────────────────────────
-    const savedMajor = localStorage.getItem("major") ?? "";
-    const savedCareerGoal = localStorage.getItem("careerGoal") ?? "";
+  // Load everything once session is confirmed authenticated
+  useEffect(() => {
+    if (status !== "authenticated") return;
+
+    fetchCourses();
+
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.major !== undefined) setMajor(json.major ?? "");
+        if (json.careerGoal !== undefined) setCareerGoal(json.careerGoal ?? "");
+      })
+      .catch(() => {});
+
     const savedRoadmap = localStorage.getItem("roadmap");
-    setMajor(savedMajor);
-    setCareerGoal(savedCareerGoal);
-    if (savedRoadmap) setRoadmap(JSON.parse(savedRoadmap));
-  }, []);
+    const savedMap = localStorage.getItem("knowledgeMap");
+    if (savedRoadmap) {
+      try { setRoadmap(JSON.parse(savedRoadmap)); } catch { localStorage.removeItem("roadmap"); }
+    }
+    if (savedMap) {
+      try {
+        const parsed = JSON.parse(savedMap);
+        if (parsed?.root) setKnowledgeMap(parsed);
+        else localStorage.removeItem("knowledgeMap");
+      } catch { localStorage.removeItem("knowledgeMap"); }
+    }
+  }, [status]);
 
   async function fetchRecommendations(data: SyllabusData[]) {
     setLoadingRecs(true);
@@ -98,12 +136,8 @@ export default function Dashboard() {
       const res = await fetch("/api/parse-syllabus", { method: "POST", body: formData });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Unknown error");
-
-      const updated = [...courses, json.data as SyllabusData];
-      localStorage.setItem("courses", JSON.stringify(updated));
-      setCourses(updated);
-      fetchRecommendations(updated);
-      fetchJobs(updated);
+      // Re-fetch from DB so the list is always in sync
+      await fetchCourses();
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -112,11 +146,12 @@ export default function Dashboard() {
     }
   }
 
-  function clearAll() {
-    localStorage.removeItem("courses");
-    localStorage.removeItem("major");
-    //deepti
-    localStorage.removeItem("careerGoal");
+  async function clearAll() {
+    await fetch("/api/syllabuses", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ all: true }),
+    });
     localStorage.removeItem("roadmap");
     setMajor("");
     setCareerGoal("");
@@ -144,9 +179,12 @@ export default function Dashboard() {
 
 
   // ── Save profile ───Deep───────────────────────────────────────────────────────
-function saveProfile() {
-  localStorage.setItem("major", major);
-  localStorage.setItem("careerGoal", careerGoal);
+async function saveProfile() {
+  await fetch("/api/profile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ major, careerGoal }),
+  });
   setProfileSaved(true);
   setTimeout(() => setProfileSaved(false), 2000);
   if (courses.length > 0) fetchRecommendations(courses);
@@ -178,6 +216,26 @@ async function generateRoadmap() {
   }
 }
 
+async function generateMap() {
+  setGeneratingMap(true);
+  setMapError(null);
+  try {
+    const res = await fetch("/api/knowledge-map", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courses, major, careerGoal }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? "Failed to generate map");
+    setKnowledgeMap(json.knowledgeMap);
+    localStorage.setItem("knowledgeMap", JSON.stringify(json.knowledgeMap));
+  } catch (err) {
+    setMapError(err instanceof Error ? err.message : "Something went wrong");
+  } finally {
+    setGeneratingMap(false);
+  }
+}
+
   const allDeadlines = courses
     .flatMap((c) => c.deadlines.map((d) => ({ ...d, course: c.courseCode })))
     .sort((a, b) => {
@@ -187,12 +245,23 @@ async function generateRoadmap() {
       return da - db;
     });
 
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-amber-50 flex items-center justify-center">
+        <p className="text-amber-400 text-sm">Loading…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-amber-50 font-sans">
 
       {/* Nav */}
       <div className="px-8 py-5 border-b border-amber-200 flex items-center justify-between">
-        <h1 className="text-xl font-semibold tracking-tight text-amber-900">Syllabus.AI</h1>
+        <div className="flex items-center gap-3">
+          <UserMenu onUpload={() => fileInputRef.current?.click()} />
+          <h1 className="text-xl font-semibold tracking-tight text-amber-900">Syllaib.us</h1>
+        </div>
         <div className="flex items-center gap-3">
           <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
           <button
@@ -314,13 +383,15 @@ async function generateRoadmap() {
         {/* Courses */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wide text-amber-500 mb-4">Your Courses</h2>
-          {courses.length === 0 ? (
+          {loadingCourses ? (
+            <p className="text-amber-600 text-sm">Loading courses…</p>
+          ) : courses.length === 0 ? (
             <p className="text-amber-600 text-sm">No courses yet.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {courses.map((c, i) => (
                 <ClassCard
-                  key={i}
+                  key={c.syllabusId ?? i}
                   courseName={c.courseName}
                   courseCode={c.courseCode}
                   lectures={c.lectures}
@@ -361,9 +432,9 @@ async function generateRoadmap() {
           ) : recommendations.length === 0 ? (
             <p className="text-amber-600 text-sm">Upload a course to see recommendations.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ">
               {recommendations.map((r, i) => (
-                <div key={i} className="bg-white border border-amber-200 rounded-2xl p-5 flex flex-col gap-2">
+                <div key={i} className="bg-white border border-amber-200 rounded-2xl p-5 flex flex-col gap-2 hover:bg-amber-50 hover:scale-[1.02] hover:shadow-md transition-all duration-300 ease-in-out group">
                   <h3 className="text-base font-semibold text-amber-950">{r.title}</h3>
                   <p className="text-sm text-amber-600">{r.reason}</p>
                   <div className="flex flex-wrap gap-1.5 mt-1">
@@ -393,6 +464,29 @@ async function generateRoadmap() {
 
           </>
         )}
+
+        {/* Knowledge Map */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-amber-500">Knowledge Map</h2>
+            <button
+              onClick={generateMap}
+              disabled={generatingMap}
+              className="border border-amber-300 text-amber-800 px-4 py-1.5 rounded-full text-xs font-medium hover:bg-amber-100 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {generatingMap ? "Generating…" : knowledgeMap ? "↻ Regenerate" : "Generate map"}
+            </button>
+          </div>
+          {mapError && <p className="text-xs text-red-500 mb-3">{mapError}</p>}
+          {knowledgeMap ? (
+            <KnowledgeMap data={knowledgeMap} />
+          ) : (
+            <div className="bg-white border border-amber-200 rounded-2xl p-10 flex flex-col items-center justify-center gap-3 text-center">
+              <p className="text-amber-400 text-sm">No knowledge map yet.</p>
+              <p className="text-amber-300 text-xs max-w-xs">Generate a map to visualise how your skills and goals connect.</p>
+            </div>
+          )}
+        </section>
 
       </div>
     </div>

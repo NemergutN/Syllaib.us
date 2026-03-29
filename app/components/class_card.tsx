@@ -21,7 +21,7 @@ export default function ClassCard({
   drops, 
 }: ClassCardProps) {
   return (
-    <div className="bg-white border border-amber-200 rounded-2xl p-6 flex flex-col gap-5">
+    <div className="bg-white border border-amber-200 rounded-2xl p-6 flex flex-col gap-5 hover:bg-amber-50 hover:scale-[1.02] hover:shadow-md transition-all duration-300 ease-in-out group">
       <div>
         <span className="text-xs font-mono text-amber-400">{courseCode}</span>
         <h3 className="text-base font-semibold text-amber-950 mt-0.5">{courseName}</h3>

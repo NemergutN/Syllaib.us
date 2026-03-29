@@ -81,6 +81,8 @@ export async function registerUser(
       username,
       email: normalizedEmail,
       password: hashedPassword,
+      major: null,
+      careerGoal: null,
       createdAt: new Date(),
     });
   } catch (error: any) {

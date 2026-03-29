@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { VertexAI } from "@google-cloud/vertexai";
 import { z } from "zod";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/lib/authOptions";
+import { insertSyllabus } from "@/app/lib/syllabus";
 
 const lectureSchema = z.object({
   day: z.string().describe("Day of the week."),
@@ -85,6 +88,17 @@ For drops, only specify a drop (i.e. HW drops) if there is a nonzero amount. If 
   } catch (err) {
     console.error("Zod validation error:", err);
     return NextResponse.json({ error: "Failed to parse Gemini response", raw: text }, { status: 500 });
+  }
+
+  // Save to MongoDB if user is logged in
+  const session = await getServerSession(authOptions);
+  if (session?.user?.email) {
+    try {
+      await insertSyllabus(session.user.email, parsed);
+    } catch (err) {
+      console.error("Failed to save syllabus to DB:", err);
+      // Non-fatal — still return the parsed data to the client
+    }
   }
 
   return NextResponse.json({ data: parsed });
