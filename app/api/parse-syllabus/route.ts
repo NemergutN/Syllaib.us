@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { VertexAI } from "@google-cloud/vertexai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/authOptions";
@@ -36,10 +36,7 @@ const syllabusSchema = z.object({
   drops: z.string().describe("Amount of drops you have for homework, quizzes, etc. (specify)")
 });
 
-const vertexAI = new VertexAI({
-  project: process.env.GOOGLE_CLOUD_PROJECT!,
-  location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
@@ -52,7 +49,7 @@ export async function POST(req: NextRequest) {
   const buffer = await file.arrayBuffer();
   const base64 = Buffer.from(buffer).toString("base64");
 
-  const model = vertexAI.getGenerativeModel({
+  const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: { responseMimeType: "application/json" },
   });
@@ -80,7 +77,7 @@ For drops, only specify a drop (i.e. HW drops) if there is a nonzero amount. If 
     }],
   });
 
-  const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  const text = result.response.text();
 
   let parsed: z.infer<typeof syllabusSchema>;
   try {

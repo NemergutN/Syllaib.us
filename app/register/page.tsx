@@ -1,28 +1,65 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { registerUser, RegisterState } from "@/actions/auth";
-import { signIn, useSession } from "next-auth/react"
+import { signIn, signOut, useSession } from "next-auth/react"
 const initialState: RegisterState = {};
 
 export default function Register() {
   const router = useRouter();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [state, formAction, isPending] = useActionState(registerUser, initialState);
 
+  // If user is already signed in, show status on this page instead of auto redirecting.
+  // This allows account switching (user can choose to continue or sign out first).
+
   useEffect(() => {
-    if (status === "authenticated") router.replace("/dashboard");
-  }, [status, router]);
+    if (!state.success) return;
+
+    (async () => {
+      if (status === "authenticated") {
+        await signOut({ redirect: false });
+      }
+
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (res?.error) {
+        setLoginError("Registration succeeded, but auto-login failed. Please log in manually.");
+      } else {
+        router.replace("/dashboard");
+      }
+    })();
+  }, [state.success, status, email, password, router]);
 
   return (
     <div className="min-h-screen bg-amber-50 flex flex-col font-sans">
 
       {/* Nav */}
-      <div className="px-8 py-5 border-b border-amber-200">
+      <div className="px-8 py-5 border-b border-amber-200 flex items-center justify-between">
         <h1 className="text-center text-xl font-semibold tracking-tight text-amber-900">
           Syllaib.us
         </h1>
+        {status === "authenticated" && session?.user && (
+          <div className="flex items-center gap-2 text-xs text-amber-600">
+            <span>Signed in as {session.user.email ?? session.user.name}</span>
+            <button
+              onClick={() => signOut({ callbackUrl: "/register" })}
+              className="text-amber-900 underline"
+            >
+              Switch account
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Form */}
@@ -41,6 +78,8 @@ export default function Register() {
             <div className="flex flex-col gap-1">
               <input
                 name="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 placeholder="Username"
                 className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm text-amber-950"
               />
@@ -53,6 +92,8 @@ export default function Register() {
               <input
                 name="email"
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
                 className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm text-amber-950"
               />
@@ -65,6 +106,8 @@ export default function Register() {
               <input
                 name="password"
                 type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm text-amber-950"
               />
@@ -77,6 +120,8 @@ export default function Register() {
               <input
                 name="confirmPassword"
                 type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm Password"
                 className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm text-amber-950"
               />
@@ -85,8 +130,8 @@ export default function Register() {
               )}
             </div>
 
-            {state.errors?.general && (
-              <p className="text-red-600 text-sm text-center">{state.errors.general[0]}</p>
+            {(state.errors?.general || loginError) && (
+              <p className="text-red-600 text-sm text-center">{state.errors?.general?.[0] ?? loginError}</p>
             )}
 
             <button

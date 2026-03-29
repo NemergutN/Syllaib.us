@@ -3,15 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 
 const Login = () => {
   const router = useRouter();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
 
-  useEffect(() => {
-    if (status === "authenticated") router.replace("/dashboard");
-  }, [status, router]);
+  // allow login page view even when already authenticated
+  // for account switching
 
   const [form, setForm] = useState({
     email: "",
@@ -59,10 +58,21 @@ const Login = () => {
     <div className="min-h-screen bg-amber-50 flex flex-col font-sans">
       
       {/* Nav */}
-      <div className="px-8 py-5 border-b border-amber-200">
+      <div className="px-8 py-5 border-b border-amber-200 flex items-center justify-between">
         <h1 className="text-center text-xl font-semibold tracking-tight text-amber-900">
           Syllaib.us
         </h1>
+        {status === "authenticated" && session?.user && (
+          <div className="flex items-center gap-2 text-xs text-amber-600">
+            <span>Signed in as {session.user.email ?? session.user.name}</span>
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="text-amber-900 underline"
+            >
+              Switch account
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Login Card */}

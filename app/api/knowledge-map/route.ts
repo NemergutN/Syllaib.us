@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { VertexAI } from "@google-cloud/vertexai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/authOptions";
 import clientPromise from "@/app/db";
 
-const vertexAI = new VertexAI({
-  project: process.env.GOOGLE_CLOUD_PROJECT!,
-  location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -96,7 +93,7 @@ Return ONLY valid JSON, no markdown, no explanation:
   }
 }`;
 
-  const model = vertexAI.getGenerativeModel({
+  const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: { responseMimeType: "application/json" },
   });
@@ -105,7 +102,7 @@ Return ONLY valid JSON, no markdown, no explanation:
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   });
 
-  const raw = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  const raw = result.response.text();
 
   let knowledgeMap: unknown;
   try {

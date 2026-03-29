@@ -12,6 +12,7 @@ export type RegisterState = {
     confirmPassword?: string[];
     general?: string[];
   };
+  success?: boolean;
 };
 
 export async function registerUser(
@@ -98,7 +99,7 @@ export async function registerUser(
 
   await new Promise((r) => setTimeout(r, 800)); // simulate async
 
-  redirect("/");
+  return { success: true };
 }
 
 export type LoginState = {

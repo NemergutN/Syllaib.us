@@ -48,7 +48,7 @@ export default function Dashboard() {
   const [loadingJobs, setLoadingJobs] = useState(false);
 
   const router = useRouter();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   // ── Roadmap state ─────Deepti────────────────────────────────────────────────────
   const [major, setMajor] = useState("");
   const [careerGoal, setCareerGoal] = useState("");
@@ -93,19 +93,21 @@ export default function Dashboard() {
       })
       .catch(() => {});
 
-    const savedRoadmap = localStorage.getItem("roadmap");
-    const savedMap = localStorage.getItem("knowledgeMap");
+    const userKey = (session?.user as any)?.id || session?.user?.email || "guest";
+    const savedRoadmap = localStorage.getItem(`roadmap:${userKey}`);
+    const savedMap = localStorage.getItem(`knowledgeMap:${userKey}`);
+
     if (savedRoadmap) {
-      try { setRoadmap(JSON.parse(savedRoadmap)); } catch { localStorage.removeItem("roadmap"); }
+      try { setRoadmap(JSON.parse(savedRoadmap)); } catch { localStorage.removeItem(`roadmap:${userKey}`); }
     }
     if (savedMap) {
       try {
         const parsed = JSON.parse(savedMap);
         if (parsed?.root) setKnowledgeMap(parsed);
-        else localStorage.removeItem("knowledgeMap");
-      } catch { localStorage.removeItem("knowledgeMap"); }
+        else localStorage.removeItem(`knowledgeMap:${userKey}`);
+      } catch { localStorage.removeItem(`knowledgeMap:${userKey}`); }
     }
-  }, [status]);
+  }, [status, session]);
 
   async function fetchRecommendations(data: SyllabusData[]) {
     setLoadingRecs(true);
@@ -152,11 +154,13 @@ export default function Dashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ all: true }),
     });
-    localStorage.removeItem("roadmap");
+    const userKey = (session?.user as any)?.id || session?.user?.email || "guest";
+    localStorage.removeItem(`roadmap:${userKey}`);
+    localStorage.removeItem(`knowledgeMap:${userKey}`);
     setMajor("");
     setCareerGoal("");
     setRoadmap(null);
-    //deepti
+    setKnowledgeMap(null);
     setCourses([]);
     setRecommendations([]);
     router.push("/");
@@ -207,7 +211,8 @@ async function generateRoadmap() {
     const json = await res.json();
     if (!res.ok) throw new Error(json.error ?? "Failed to generate roadmap");
     setRoadmap(json.roadmap);
-    localStorage.setItem("roadmap", JSON.stringify(json.roadmap));
+    const userKey = (session?.user as any)?.id || session?.user?.email || "guest";
+    localStorage.setItem(`roadmap:${userKey}`, JSON.stringify(json.roadmap));
     setTab("roadmap");
   } catch (err) {
     setRoadmapError(err instanceof Error ? err.message : "Something went wrong");
@@ -228,7 +233,8 @@ async function generateMap() {
     const json = await res.json();
     if (!res.ok) throw new Error(json.error ?? "Failed to generate map");
     setKnowledgeMap(json.knowledgeMap);
-    localStorage.setItem("knowledgeMap", JSON.stringify(json.knowledgeMap));
+    const userKey = (session?.user as any)?.id || session?.user?.email || "guest";
+    localStorage.setItem(`knowledgeMap:${userKey}`, JSON.stringify(json.knowledgeMap));
   } catch (err) {
     setMapError(err instanceof Error ? err.message : "Something went wrong");
   } finally {

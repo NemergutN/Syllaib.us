@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { VertexAI } from "@google-cloud/vertexai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const vertexAI = new VertexAI({
-  project: process.env.GOOGLE_CLOUD_PROJECT!,
-  location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
     const { courses } = (await req.json()) as { courses: string[] };
 
-    const model = vertexAI.getGenerativeModel({
+    const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       generationConfig: { responseMimeType: "application/json" },
     });
@@ -28,7 +25,7 @@ Return ONLY a JSON array in this exact format:
       }],
     });
 
-    const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
+    const text = result.response.text();
     const jobs = JSON.parse(text);
     return NextResponse.json({ jobs });
   } catch (err) {

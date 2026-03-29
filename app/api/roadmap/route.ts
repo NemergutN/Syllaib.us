@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { VertexAI } from "@google-cloud/vertexai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const vertexAI = new VertexAI({
-  project: process.env.GOOGLE_CLOUD_PROJECT!,
-  location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -36,9 +33,9 @@ export async function POST(req: NextRequest) {
   // Step 1 — Gemini searches the web for real job market data (with grounding)
   let jobMarketContext = "";
   try {
-    const searchModel = vertexAI.getGenerativeModel({
+    const searchModel = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      tools: [{ googleSearchRetrieval: {} }],
+      tools: [{ googleSearch: {} }],
     });
     const searchResult = await searchModel.generateContent({
       contents: [{
@@ -48,7 +45,7 @@ export async function POST(req: NextRequest) {
         }],
       }],
     });
-    jobMarketContext = searchResult.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    jobMarketContext = searchResult.response.text();
   } catch {
     jobMarketContext = `Use your knowledge of what a ${careerGoal} needs in 2025-2026.`;
   }
@@ -130,7 +127,7 @@ Return ONLY valid JSON, no markdown fences, no explanation, nothing else:
   ]
 }`;
 
-  const roadmapModel = vertexAI.getGenerativeModel({
+  const roadmapModel = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: { responseMimeType: "application/json" },
   });
@@ -139,7 +136,7 @@ Return ONLY valid JSON, no markdown fences, no explanation, nothing else:
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   });
 
-  const raw = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  const raw = result.response.text();
 
   let roadmap: unknown;
   try {
