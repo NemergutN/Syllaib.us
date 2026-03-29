@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { VertexAI } from "@google-cloud/vertexai";
 import { z } from "zod";
 
 const lectureSchema = z.object({
@@ -33,7 +33,10 @@ const syllabusSchema = z.object({
   drops: z.string().describe("Amount of drops you have for homework, quizzes, etc. (specify)")
 });
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const vertexAI = new VertexAI({
+  project: process.env.GOOGLE_CLOUD_PROJECT!,
+  location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
+});
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
@@ -46,16 +49,16 @@ export async function POST(req: NextRequest) {
   const buffer = await file.arrayBuffer();
   const base64 = Buffer.from(buffer).toString("base64");
 
-  const response = await ai.models.generateContent({
+  const model = vertexAI.getGenerativeModel({
     model: "gemini-2.5-flash",
-    contents: {
+    generationConfig: { responseMimeType: "application/json" },
+  });
+
+  const result = await model.generateContent({
+    contents: [{
+      role: "user",
       parts: [
-        {
-          inlineData: {
-            mimeType: file.type || "application/pdf",
-            data: base64,
-          },
-        },
+        { inlineData: { mimeType: file.type || "application/pdf", data: base64 } },
         {
           text: `Extract the syllabus information from this document and return ONLY valid JSON matching this exact structure:
 {
@@ -65,24 +68,23 @@ export async function POST(req: NextRequest) {
   "officeHours": [{ "day": "Wednesday", "time": "2:30-5:30", "instructor": "John Doe" }],
   "grading": [{ "category": "Homework", "weight": 30 }],
   "deadlines": [{ "title": "Midterm Exam", "date": "Mar 2" }],
-  "drops": "HW drops: 1, Quiz drops: 1, ...
+  "drops": "HW drops: 1, Quiz drops: 1, ..."
 }
-For grading weights, extract the numeric percentage only (e.g. "30% Homework" → weight: 30). 
+For grading weights, extract the numeric percentage only (e.g. "30% Homework" → weight: 30).
 For drops, only specify a drop (i.e. HW drops) if there is a nonzero amount. If there is none, make it the string 'N/A'`,
         },
       ],
-    },
-    config: {
-      responseMimeType: "application/json",
-    },
+    }],
   });
+
+  const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
   let parsed: z.infer<typeof syllabusSchema>;
   try {
-    parsed = syllabusSchema.parse(JSON.parse(response.text!));
+    parsed = syllabusSchema.parse(JSON.parse(text));
   } catch (err) {
     console.error("Zod validation error:", err);
-    return NextResponse.json({ error: "Failed to parse Gemini response", raw: response.text }, { status: 500 });
+    return NextResponse.json({ error: "Failed to parse Gemini response", raw: text }, { status: 500 });
   }
 
   return NextResponse.json({ data: parsed });

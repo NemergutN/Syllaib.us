@@ -180,7 +180,12 @@ async function generateRoadmap() {
 
   const allDeadlines = courses
     .flatMap((c) => c.deadlines.map((d) => ({ ...d, course: c.courseCode })))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => {
+      const da = new Date(a.date).getTime();
+      const db = new Date(b.date).getTime();
+      if (isNaN(da) || isNaN(db)) return a.date.localeCompare(b.date);
+      return da - db;
+    });
 
   return (
     <div className="min-h-screen bg-amber-50 font-sans">

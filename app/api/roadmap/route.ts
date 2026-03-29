@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { VertexAI } from "@google-cloud/vertexai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const vertexAI = new VertexAI({
+  project: process.env.GOOGLE_CLOUD_PROJECT!,
+  location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
+});
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -30,17 +33,22 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Step 1 — Gemini searches the web for real job market data
+  // Step 1 — Gemini searches the web for real job market data (with grounding)
   let jobMarketContext = "";
   try {
-    const searchResponse = await ai.models.generateContent({
+    const searchModel = vertexAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      contents: `What are the most in-demand skills, tools, technologies, and qualifications for a ${careerGoal} in 2025? List specific programming languages, frameworks, certifications, and experiences that employers are actively requiring right now.`,
-      config: {
-        tools: [{ googleSearch: {} }],
-      },
+      tools: [{ googleSearchRetrieval: {} }],
     });
-    jobMarketContext = searchResponse.text ?? "";
+    const searchResult = await searchModel.generateContent({
+      contents: [{
+        role: "user",
+        parts: [{
+          text: `What are the most in-demand skills, tools, technologies, and qualifications for a ${careerGoal} in 2025? List specific programming languages, frameworks, certifications, and experiences that employers are actively requiring right now.`,
+        }],
+      }],
+    });
+    jobMarketContext = searchResult.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   } catch {
     jobMarketContext = `Use your knowledge of what a ${careerGoal} needs in 2025-2026.`;
   }
@@ -68,7 +76,7 @@ Important instructions:
 - Be SPECIFIC to this student's actual courses and stated goal.
 - Reference their actual course names where relevant.
 - Every action item must be concrete and immediately actionable.
-- The skillMatchScore should honestly reflect how well their current courses align with their goal.
+- The skillMatchScore should honestly reflect how well their current courses align with their goal, but not be extremely harsh.
 
 Return ONLY valid JSON, no markdown fences, no explanation, nothing else:
 
@@ -122,25 +130,24 @@ Return ONLY valid JSON, no markdown fences, no explanation, nothing else:
   ]
 }`;
 
-  const response = await ai.models.generateContent({
+  const roadmapModel = vertexAI.getGenerativeModel({
     model: "gemini-2.5-flash",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-    },
+    generationConfig: { responseMimeType: "application/json" },
   });
 
-  let roadmap: any;
+  const result = await roadmapModel.generateContent({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+  });
+
+  const raw = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+
+  let roadmap: unknown;
   try {
-    let raw = response.text ?? "";
-    if (raw.includes("```")) {
-      raw = raw.split("```")[1];
-      if (raw.startsWith("json")) raw = raw.slice(4);
-    }
-    roadmap = JSON.parse(raw.trim());
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    roadmap = JSON.parse(cleaned);
   } catch {
     return NextResponse.json(
-      { error: "Failed to parse response. Try again.", raw: response.text },
+      { error: "Failed to parse response. Try again.", raw },
       { status: 500 }
     );
   }
