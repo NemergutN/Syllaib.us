@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ClassCard from "../components/class_card";
+import JobLinks from "../components/job_links";
 // ── Roadmap ───────Deepti───────────────────────────────────────────────────────
 import RoadmapView, { type RoadmapData } from "../components/roadmapView";
+
 
 type SyllabusData = {
   courseName: string;
@@ -22,6 +24,14 @@ type Recommendation = {
   skills: string[];
 };
 
+type Job = {
+  company: string;
+  title: string;
+  url?: string;
+  location?: string;
+};
+
+
 export default function Dashboard() {
   const [courses, setCourses] = useState<SyllabusData[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -29,6 +39,9 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+
   const router = useRouter();
   // ── Roadmap state ─────Deepti────────────────────────────────────────────────────
   const [major, setMajor] = useState("");
@@ -42,7 +55,10 @@ export default function Dashboard() {
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("courses") ?? "[]") as SyllabusData[];
     setCourses(stored);
-    if (stored.length > 0) fetchRecommendations(stored);
+    if (stored.length > 0) {
+      fetchRecommendations(stored);
+      fetchJobs(stored);
+    }
 
     // ── Load saved profile + roadmap ──────────────────────────────────────────
     const savedMajor = localStorage.getItem("major") ?? "";
@@ -87,6 +103,7 @@ export default function Dashboard() {
       localStorage.setItem("courses", JSON.stringify(updated));
       setCourses(updated);
       fetchRecommendations(updated);
+      fetchJobs(updated);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -109,6 +126,22 @@ export default function Dashboard() {
     setRecommendations([]);
     router.push("/");
   }
+
+  async function fetchJobs(data: SyllabusData[]) {
+    setLoadingJobs(true);
+    try {
+      const res = await fetch("/api/get-job-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courses: data.map((c) => c.courseName) }),
+      });
+      const json = await res.json();
+      if (res.ok) setJobs(json.jobs);
+    } finally {
+      setLoadingJobs(false);
+    }
+  }
+
 
   // ── Save profile ───Deep───────────────────────────────────────────────────────
 function saveProfile() {
@@ -340,6 +373,19 @@ async function generateRoadmap() {
             </div>
           )}
         </section>
+
+        {/* Job links */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-amber-500 mb-4">Job Listings</h2>
+          {loadingJobs ? (
+            <p className="text-amber-600 text-sm">Finding job listings…</p>
+          ) : jobs.length === 0 ? (
+            <p className="text-amber-600 text-sm">Upload a course to see job listings.</p>
+          ) : (
+            <JobLinks jobs={jobs} />
+          )}
+        </section>
+
           </>
         )}
 

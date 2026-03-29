@@ -42,11 +42,11 @@ export async function POST(req: NextRequest) {
     });
     jobMarketContext = searchResponse.text ?? "";
   } catch {
-    jobMarketContext = `Use your knowledge of what a ${careerGoal} needs in 2025.`;
+    jobMarketContext = `Use your knowledge of what a ${careerGoal} needs in 2025-2026.`;
   }
 
   // Step 2 — Gemini generates the full structured roadmap
-  const prompt = `You are an expert academic and career advisor AI agent. Generate a deeply personalized career roadmap for this student.
+  const prompt = `You are an overqualified expert academic and career advisor AI agent with 10+ years of experience. Generate a thorough, exhaustively personalized, but realistic career roadmap for this student.
 
 STUDENT PROFILE:
 - Major: ${major}
@@ -61,7 +61,7 @@ ${allSkills.length > 0 ? [...new Set(allSkills)].join(", ") : "Not yet extracted
 TOPICS BEING STUDIED:
 ${allTopics.length > 0 ? [...new Set(allTopics)].join(", ") : "Not yet extracted — infer from the course names and major."}
 
-LIVE JOB MARKET DATA (from Google Search, 2025):
+LIVE JOB MARKET DATA (from Google Search, 2025-2026):
 ${jobMarketContext}
 
 Important instructions:

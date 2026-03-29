@@ -64,7 +64,7 @@ const Login = () => {
               placeholder="Email"
               value={form.email}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
+              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm text-amber-950"
             />
 
             <input
@@ -73,7 +73,7 @@ const Login = () => {
               placeholder="Password"
               value={form.password}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
+              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm text-amber-950"
             />
 
             {error && (
@@ -98,11 +98,11 @@ const Login = () => {
 
           {/* OAuth */}
           <div className="flex flex-col gap-3">
-            <button className="w-full border border-amber-200 py-3 rounded-xl text-sm font-medium hover:bg-amber-100 transition">
+            <button className="w-full border border-amber-200 py-3 rounded-xl text-sm font-medium hover:bg-amber-100 transition text-amber-950">
               Continue with Google
             </button>
 
-            <button className="w-full border border-amber-200 py-3 rounded-xl text-sm font-medium hover:bg-amber-100 transition">
+            <button className="w-full border border-amber-200 py-3 rounded-xl text-sm font-medium hover:bg-amber-100 transition text-amber-950">
               Continue with GitHub
             </button>
           </div>

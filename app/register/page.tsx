@@ -1,49 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState } from "react";
 import { useRouter } from "next/navigation";
+import { registerUser, RegisterState } from "@/actions/auth";
+
+const initialState: RegisterState = {};
 
 export default function Register() {
   const router = useRouter();
-
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-    if (!form.username || !form.email || !form.password || !form.confirmPassword) {
-      return setError("Please fill in all fields");
-    }
-
-    if (form.password !== form.confirmPassword) {
-      return setError("Passwords do not match");
-    }
-
-    setLoading(true);
-
-    // Simulate request
-    setTimeout(() => {
-      setLoading(false);
-      router.push("/dashboard");
-    }, 1200);
-  }
+  const [state, formAction, isPending] = useActionState(registerUser, initialState);
 
   return (
     <div className="min-h-screen bg-amber-50 flex flex-col font-sans">
-      
+
       {/* Nav */}
       <div className="px-8 py-5 border-b border-amber-200">
         <h1 className="text-center text-xl font-semibold tracking-tight text-amber-900">
@@ -62,53 +31,65 @@ export default function Register() {
             Start organizing your semester in seconds.
           </p>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            
-            <input
-              name="username"
-              placeholder="Username"
-              value={form.username}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
-            />
+          <form action={formAction} className="flex flex-col gap-4">
 
-            <input
-              name="email"
-              type="email"
-              placeholder="Email"
-              value={form.email}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
-            />
+            <div className="flex flex-col gap-1">
+              <input
+                name="username"
+                placeholder="Username"
+                className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm text-amber-950"
+              />
+              {state.errors?.username && (
+                <p className="text-red-600 text-xs px-1">{state.errors.username[0]}</p>
+              )}
+            </div>
 
-            <input
-              name="password"
-              type="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
-            />
+            <div className="flex flex-col gap-1">
+              <input
+                name="email"
+                type="email"
+                placeholder="Email"
+                className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm text-amber-950"
+              />
+              {state.errors?.email && (
+                <p className="text-red-600 text-xs px-1">{state.errors.email[0]}</p>
+              )}
+            </div>
 
-            <input
-              name="confirmPassword"
-              type="password"
-              placeholder="Confirm Password"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
-            />
+            <div className="flex flex-col gap-1">
+              <input
+                name="password"
+                type="password"
+                placeholder="Password"
+                className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm text-amber-950"
+              />
+              {state.errors?.password && (
+                <p className="text-red-600 text-xs px-1">{state.errors.password[0]}</p>
+              )}
+            </div>
 
-            {error && (
-              <p className="text-red-600 text-sm text-center">{error}</p>
+            <div className="flex flex-col gap-1">
+              <input
+                name="confirmPassword"
+                type="password"
+                placeholder="Confirm Password"
+                className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm text-amber-950"
+              />
+              {state.errors?.confirmPassword && (
+                <p className="text-red-600 text-xs px-1">{state.errors.confirmPassword[0]}</p>
+              )}
+            </div>
+
+            {state.errors?.general && (
+              <p className="text-red-600 text-sm text-center">{state.errors.general[0]}</p>
             )}
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isPending}
               className="mt-2 bg-amber-900 text-amber-50 py-3 rounded-full text-sm font-medium hover:bg-amber-800 active:scale-95 transition-all disabled:opacity-50"
             >
-              {loading ? "Creating account..." : "Sign up"}
+              {isPending ? "Creating account..." : "Sign up"}
             </button>
           </form>
 
@@ -121,11 +102,10 @@ export default function Register() {
 
           {/* OAuth Buttons */}
           <div className="flex flex-col gap-3">
-            <button className="w-full border border-amber-200 py-3 rounded-xl text-sm font-medium hover:bg-amber-100 transition">
+            <button className="w-full border border-amber-200 py-3 rounded-xl text-sm font-medium hover:bg-amber-100 transition text-amber-950">
               Continue with Google
             </button>
-
-            <button className="w-full border border-amber-200 py-3 rounded-xl text-sm font-medium hover:bg-amber-100 transition">
+            <button className="w-full border border-amber-200 py-3 rounded-xl text-sm font-medium hover:bg-amber-100 transition text-amber-950">
               Continue with GitHub
             </button>
           </div>

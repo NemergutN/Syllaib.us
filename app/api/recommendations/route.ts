@@ -15,7 +15,8 @@ Keep each reason to one sentence. List 2-3 relevant skills per role.`,
       config: { responseMimeType: "application/json" },
     });
 
-    const data = JSON.parse(response.text!);
+    const cleaned = response.text!.replace(/```json|```/g, "").trim();
+    const data = JSON.parse(cleaned);
     return NextResponse.json({ recommendations: data });
   } catch (err) {
     console.error("Recommendations error:", err);

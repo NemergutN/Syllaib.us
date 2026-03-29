@@ -14,7 +14,9 @@ declare global {
 }
 
 if (!global._mongoClientPromise) {
-  client = new MongoClient(uri);
+  client = new MongoClient(uri, {
+    tlsAllowInvalidCertificates: true,
+  });
   global._mongoClientPromise = client.connect();
 }
 
